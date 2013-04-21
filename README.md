@@ -15,4 +15,4 @@ Inbound's LEDs are controlled through an Arduino that connects to a custom web s
 Demo Video
 ----------
 
-You can see Inbound in action by watching our [demonstration video](https://vimeo.com/64514182).
+You can see Inbound in action by watching our [demonstration video](https://vimeo.com/64515087).
