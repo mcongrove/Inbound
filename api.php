@@ -1,11 +1,12 @@
 <?php
+
 ini_set("display_errors", 1);
 
 // Define constants
 define("AU", 149597871); // Distance from Sun to Earth (1AU)
 define("LED_COUNT", 7); // Number of LEDs between Sun and Earth on our hardware.
 
-// Retrieve data from Royal Observatory of Belgium's CACTus tool, which utilizes data from the STEREO satellites
+// Retrieve data from Royal Observatory of Belgium's CACTus tool, which utilizes data from the STEREO and LASCO satellites
 function getData()
 {
 	$ch = curl_init();
@@ -20,7 +21,7 @@ function getData()
 	return $output;
 }
 
-// Parse the CACTus data, looking for CMEs
+// Parse the CACTus data, looking for CMEs and flares
 function parseData($data)
 {
 	// Ignore all the headers
@@ -67,11 +68,11 @@ function sanitizeData($data)
 			}
 		}
 
-		// Normally, we'd check for a partial or full-halo event here (+180 degrees?)
+		// Normally, we'd check for a partial or full-halo event here (+180 degrees)
 		// We should also be checking to see if the principal angle shows that the event will interact with Earth
 		// For the sake of showing interesting data, we omit this check
 		// Instead, we'll look for an angular width of only 90 degrees (partial halo) and not care if the event is coming our direction
-		if (isset($object->width) && $object->width >= 15) {
+		if (isset($object->width) && $object->width >= 90) {
 			$events[] = $object;
 		}
 	}
@@ -81,7 +82,7 @@ function sanitizeData($data)
 		return $a->liftoff < $b->liftoff;
 	}
 
-	uasort($events, 'liftoffSort');
+	uasort($events, "liftoffSort");
 
 	return $events;
 }
@@ -93,24 +94,26 @@ function organizeData($data)
 	$lights = array();
 
 	foreach($data as $event) {
-		$totalTime = doMath($event);
-		$diff = round(($currentTime - $event->liftoff));
-		$progress = $totalTime / $diff;
-		$currentLight = LED_COUNT * $progress;
-		$filter = (LED_COUNT + 1) * $progress;
+		$totalTime = doMath($event); // Time it takes to travel between Sun and Earth
+		$diff = round(($currentTime - $event->liftoff)); // Time since the event left the Sun
+		$progress = $totalTime / $diff; // What % the event has progressed from the Sun to Earth
+		$currentLight = LED_COUNT * $progress; // Which LED should be lit up by this event
+		$filter = (LED_COUNT + 1) * $progress; // Determine if this event is between the Sun and Earth (so we can ignore long-gone events)
 
-		// Only worry about flares/CME's between the sun and earth
+		// Only worry about flares/CME's still between the Sun and Earth
 		if($filter <= 8) {
 			$light = mapLight(round($currentLight));
 
-			if($light == '!') {
+			if($light == "!") {
 				$firstIndexValue = null;
+				
 				if(isset($lights[0])) {
 					$firstIndexValue = $lights[0];
 				} else {
-					$firstIndexValue = '';
+					$firstIndexValue = "";
 				}
-				$lights[0] = '!' . $firstIndexValue;
+				
+				$lights[0] = "!" . $firstIndexValue;
 			} else {
 				$lights[] = $light;
 			}
@@ -132,7 +135,7 @@ function mapLight($light)
 		5 => 10,
 		6 => 11,
 		7 => 12,
-		8 => '!'
+		8 => "!" // This indicates that a CME just passed by Earth, so do something special
 	);
 	return $arduinoLights[$light];
 }
@@ -151,11 +154,6 @@ $newData = getData();
 $newData = parseData($newData);
 $events = sanitizeData($newData);
 $formattedEvents = organizeData($events);
-
-//echo '<pre>';
-//print_r($events);
-//echo '</pre>';
-//exit();
 
 // Output the data
 echo "{" . $formattedEvents . "}";
