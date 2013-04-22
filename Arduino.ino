@@ -5,8 +5,7 @@
 
 // Set constants
 #define API_QUERY "GET /spaceapps/api.php HTTP/1.0"
-//// #define API_QUERY_FREQUENCY 14400
-#define API_QUERY_FREQUENCY 10
+#define API_QUERY_FREQUENCY 14400
 #define API_DELIMITER "%"
 #define API_SPECIAL "!"
 #define LED_SIZE 8
@@ -39,8 +38,8 @@ void setup() {
   // Initializes serial output
   Serial.begin(9600);
   
-////  EthernetConnect();
-////  ApiQuery();
+  EthernetConnect();
+  ApiQuery();
   
   LedSetOutput();
   LedSetEarthSun();
@@ -51,6 +50,7 @@ void loop() {
   if(_Ethernet.available()) {
     if(_RequestFlag) {
       _RequestFlag = false;
+      
       LedAllClear();
     }
     // Read the data from the client
